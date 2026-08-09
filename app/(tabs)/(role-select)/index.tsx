@@ -35,7 +35,7 @@ export default function RoleSelectScreen() {
          
           <TouchableOpacity 
             style={styles.roleButton}
-            onPress={() => router.push('/(student-login)')}
+            onPress={() => router.push('/(role-select)/student')}
             activeOpacity={0.8}
           >
             <View style={styles.buttonLeft}>
@@ -46,7 +46,7 @@ export default function RoleSelectScreen() {
           
           <TouchableOpacity 
             style={styles.roleButton}
-            onPress={() => router.push('/(teacher-login)')}
+            onPress={() => router.push('/(role-select)/teacher')}
             activeOpacity={0.8}
           >
             <View style={styles.buttonLeft}>
