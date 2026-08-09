@@ -5,6 +5,8 @@ import {
   View,
   TextInput,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -44,12 +46,14 @@ export default function DynamicLoginScreen() {
     router.push(`/(tabs)/(role-select)/(signup)/${role}`);
   };
 
-  const handleForgotPassword = () => {
-    console.log(`Navigate to ${role} Forgot Password`);
-  };
+  const handleForgotPassword = () => {};
 
   return (
     <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={styles.innerContainer}
+            >
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
@@ -148,7 +152,8 @@ export default function DynamicLoginScreen() {
           </TouchableOpacity>
         </View>
         <Text style={styles.copyrightText}>© 2026 FoundIt App</Text>
-      </View>
+        </View>
+        </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -164,6 +169,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 10,
+  },
+  innerContainer: {
+    flex: 1,
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   backButton: {
     width: 48,
