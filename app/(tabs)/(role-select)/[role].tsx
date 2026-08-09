@@ -23,7 +23,7 @@ export default function DynamicLoginScreen() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false); // State for password visibility
 
   const handleLogin = () => {
-    console.log(`Logging in ${role} with:`, identifier, password);
+    router.push('/(tabs)/(role-select)/(home)');
   };
 
   const handleBack = () => {

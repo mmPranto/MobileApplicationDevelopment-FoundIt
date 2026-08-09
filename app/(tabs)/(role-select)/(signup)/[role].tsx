@@ -90,7 +90,7 @@ export default function DynamicSignUpScreen() {
               </Text>
               <TextInput
                 style={styles.input}
-                placeholder={isTeacher ? "Enter Teacher ID" : "e.g., 23-50176-1"}
+                placeholder={isTeacher ? "e.g., 2301-1111-1" : "e.g., 23-50176-1"}
                 placeholderTextColor="#64748b"
                 value={identifier}
                 onChangeText={setIdentifier}
