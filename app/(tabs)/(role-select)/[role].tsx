@@ -31,7 +31,7 @@ export default function DynamicLoginScreen() {
   };
 
   const handleSignUp = () => {
-    console.log(`Navigate to ${role} Sign Up`);
+    router.push(`/(tabs)/(role-select)/(signup)/${role}`);
   };
 
   const handleForgotPassword = () => {
