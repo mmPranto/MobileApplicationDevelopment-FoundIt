@@ -5,10 +5,10 @@ export default function HomeLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#0D9488",
-        tabBarInactiveTintColor: "#94A3B8",
+        tabBarActiveTintColor: "#7bef15",
+        tabBarInactiveTintColor: "#FFFFFF",
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "#000000",
           borderTopColor: "#F1F5F9",
           height: 65,
           paddingBottom: 8,
