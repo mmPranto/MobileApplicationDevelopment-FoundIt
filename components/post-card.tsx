@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, TouchableOpacity, View, Text } from "react-native";
-import { Post } from "@/data/posts"; // Adjust the import path to where your posts data file is located
+import { Post } from "@/data/posts"; 
 
 interface PostCardProps {
   post: Post;
