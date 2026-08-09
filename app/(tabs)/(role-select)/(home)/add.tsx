@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, TextInput, ScrollView, TouchableOpacity, Alert,View } from "react-native";
-import { POSTS, Post } from "@/data/posts";
+
 
 export default function PostInputFieldForm() {
     const [postId, setPostId] = useState("");
@@ -10,24 +10,7 @@ export default function PostInputFieldForm() {
     const [itemDescription, setItemDescription] = useState("");
     const [date, setDate] = useState("");
 
-    const handleSubmit = () => {
-        if (!postId || !userId || !itemTitle || !itemDescription || !date) {
-            Alert.alert("Error", "Please fill in all fields.");
-            return;
-        }
-
-        // const newPost: Post = {
-        //     postId,
-        //     userId,
-        //     itemTitle,
-        //     category,
-        //     itemDescription,
-        //     date,
-        // };
-
-        // POSTS.unshift(newPost);
-        // Alert.alert("Success", "Post submitted successfully!");
-    };
+    
 
     return (
         <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -93,8 +76,8 @@ export default function PostInputFieldForm() {
                 onChangeText={setDate}
             />
 
-            {/* Submit Button Added Here */}
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+            
+            <TouchableOpacity style={styles.submitButton} onPress={() => {}}>
                 <Text style={styles.submitButtonText}>Submit Post</Text>
             </TouchableOpacity>
         </ScrollView>
