@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,41 +10,109 @@ import {
   Platform,
   Alert,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
 export default function ProfileScreen() {
   const router = useRouter();
 
- 
-  const [fullName, setFullName] = useState("John Doe");
-  const [email, setEmail] = useState("john.doe@university.edu");
-  const [identifier, setIdentifier] = useState("23-50176-1"); // Student or Teacher ID
-  const [role, setRole] = useState<"student" | "teacher">("student");
+  // Automatically grab the Metro bundler host IP if running on physical devices/emulators
+  const getBaseUrl = () => {
+    if (Constants.expoConfig?.extra?.apiUrl) {
+      return Constants.expoConfig.extra.apiUrl;
+    }
+    const debuggerHost =
+      Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
+    if (debuggerHost) {
+      const ip = debuggerHost.split(":")[0];
+      return `http://${ip}:5000`;
+    }
+    return Platform.OS === "android"
+      ? "http://10.0.2.2:5000"
+      : "http://localhost:5000";
+  };
 
- 
+  const BASE_URL = getBaseUrl();
+
+  const [loading, setLoading] = useState(true);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [role, setRole] = useState<"student" | "teacher">("student");
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isPasswordSectionOpen, setIsPasswordSectionOpen] = useState(false);
 
- 
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  useEffect(() => {
+    fetchUserData();
+  }, []);
 
- 
-  const handleUpdateProfile = () => {
+  const fetchUserData = async () => {
+    try {
+      const savedIdentifier = await AsyncStorage.getItem("userIdentifier");
+      if (!savedIdentifier) {
+        Alert.alert("Session Expired", "Please log in again.");
+        router.replace("/(tabs)/(role-select)/login" as any);
+        return;
+      }
+
+      const response = await fetch(`${BASE_URL}/profiles/${savedIdentifier}`, {
+        method: "GET",
+        headers: { "Cache-Control": "no-cache" },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setFullName(data.fullName);
+        setEmail(data.email);
+        setIdentifier(data.identifier);
+        setRole(data.role);
+        setProfileImage(data.avatarUrl || null);
+      } else {
+        Alert.alert("Error", data.message || "Failed to load user profile.");
+      }
+    } catch (error) {
+      console.error("Fetch profile error:", error);
+      Alert.alert("Error", "Network connection failed to " + BASE_URL);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
     if (!fullName.trim() || !email.trim()) {
       Alert.alert("Error", "Name and email cannot be empty.");
       return;
     }
-    Alert.alert("Success", "Profile updated successfully!");
- 
+
+    try {
+      const response = await fetch(`${BASE_URL}/profiles/${identifier}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, email }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert("Success", "Profile updated successfully!");
+      } else {
+        Alert.alert("Error", data.message || "Failed to update profile.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not connect to server.");
+    }
   };
 
- 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       Alert.alert("Error", "Please fill in all password fields.");
       return;
@@ -53,40 +121,36 @@ export default function ProfileScreen() {
       Alert.alert("Error", "New passwords do not match.");
       return;
     }
-    if (newPassword.length < 8) {
-      Alert.alert("Error", "New password must be at least 8 characters long.");
+    if (newPassword.length < 6) {
+      Alert.alert("Error", "New password must be at least 6 characters long.");
       return;
     }
 
-    Alert.alert("Success", "Password changed successfully!");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setIsPasswordSectionOpen(false);
- 
+    try {
+      const response = await fetch(
+        `${BASE_URL}/profiles/${identifier}/password`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentPassword, newPassword }),
+        },
+      );
+
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert("Success", "Password changed successfully!");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setIsPasswordSectionOpen(false);
+      } else {
+        Alert.alert("Error", data.message || "Failed to change password.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not connect to server.");
+    }
   };
 
- 
-  const handleChangeImage = () => {
-    Alert.alert(
-      "Profile Image",
-      "Choose an option to change your profile picture.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Take Photo",
-          onPress: () => console.log("Open Camera"),
-        },
-        {
-          text: "Choose from Gallery",
-          onPress: () => console.log("Open Gallery"),
-        },
-      ],
-    );
- 
-  };
-
- 
   const handleDeleteAccount = () => {
     Alert.alert(
       "Delete Account",
@@ -96,15 +160,76 @@ export default function ProfileScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            console.log("Account deleted");
- 
-            router.replace("/login");
+          onPress: async () => {
+            try {
+              if (!identifier) {
+                Alert.alert("Error", "User identifier is missing.");
+                return;
+              }
+
+              console.log(
+                `Sending DELETE request to: ${BASE_URL}/profiles/${identifier}`,
+              );
+
+              const response = await fetch(
+                `${BASE_URL}/profiles/${identifier}`,
+                {
+                  method: "DELETE",
+                },
+              );
+
+              let data = {};
+              try {
+                data = await response.json();
+              } catch (e) {
+                // Response might be empty/204
+              }
+
+              if (response.ok) {
+                await AsyncStorage.removeItem("userIdentifier");
+                Alert.alert(
+                  "Account Deleted",
+                  "Your account has been successfully deleted.",
+                );
+                router.replace("/(tabs)/(role-select)/login" as any);
+              } else {
+                Alert.alert(
+                  "Error",
+                  (data as any).message || "Failed to delete account.",
+                );
+              }
+            } catch (error) {
+              console.error("Delete account error:", error);
+              Alert.alert("Error", "Could not connect to server.");
+            }
           },
         },
       ],
     );
   };
+
+  const handleChangeImage = () => {
+    Alert.alert(
+      "Profile Image",
+      "Choose an option to change your profile picture.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Take Photo", onPress: () => console.log("Open Camera") },
+        {
+          text: "Choose from Gallery",
+          onPress: () => console.log("Open Gallery"),
+        },
+      ],
+    );
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#111112" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -113,7 +238,6 @@ export default function ProfileScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
- 
           <View style={styles.topBar}>
             <TouchableOpacity
               style={styles.backButton}
@@ -132,7 +256,6 @@ export default function ProfileScreen() {
 
           <Text style={styles.title}>Profile Settings</Text>
 
- 
           <View style={styles.avatarContainer}>
             <TouchableOpacity
               onPress={handleChangeImage}
@@ -157,7 +280,6 @@ export default function ProfileScreen() {
             </Text>
           </View>
 
- 
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Personal Information</Text>
 
@@ -191,7 +313,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
- 
           <View style={styles.sectionCard}>
             <TouchableOpacity
               style={styles.accordionHeader}
@@ -250,13 +371,8 @@ export default function ProfileScreen() {
             )}
           </View>
 
- 
-          <View style={styles.dangerCard}>
-            <Text style={styles.dangerTitle}>Danger Zone</Text>
-            <Text style={styles.dangerDescription}>
-              Once you delete your account, there is no going back. Please be
-              certain.
-            </Text>
+          {/* Delete Account Section */}
+          <View style={styles.sectionCard}>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={handleDeleteAccount}
@@ -310,8 +426,8 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "900",
     marginBottom: 20,
-      color: "#111112",
-      textAlign:"center"
+    color: "#111112",
+    textAlign: "center",
   },
   avatarContainer: {
     alignItems: "center",
@@ -392,25 +508,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   primaryButtonText: { color: "#ffffff", fontSize: 15, fontWeight: "bold" },
-  dangerCard: {
-    backgroundColor: "#fef2f2",
-    borderWidth: 1.5,
-    borderColor: "#fecaca",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-  },
-  dangerTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#dc2626",
-    marginBottom: 4,
-  },
-  dangerDescription: {
-    fontSize: 13,
-    color: "#7f1d1d",
-    marginBottom: 12,
-  },
   deleteButton: {
     backgroundColor: "#dc2626",
     padding: 14,

@@ -14,6 +14,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -65,6 +68,7 @@ export default function LoginScreen() {
       }
 
       console.log("Logged in successfully:", data.user);
+      await AsyncStorage.setItem("userIdentifier", data.user.identifier);
       Alert.alert("Success", `Welcome back, ${data.user.fullName}!`);
 
       

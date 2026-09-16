@@ -48,24 +48,61 @@ export class ProfilesService {
   async login(loginDto: LoginProfileDto) {
     const { identifier, password } = loginDto;
 
-    
     const profile = await this.profileRepository.findOne({ where: { identifier } });
     if (!profile) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Invalid ID or password');
     }
 
-    
     const isPasswordValid = await bcrypt.compare(password, profile.passwordHash);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Invalid ID or password');
     }
 
-    
     const { passwordHash: _, ...result } = profile;
 
     return {
       message: 'Login successful',
       user: result,
     };
+  }
+
+  async findByIdentifier(identifier: string) {
+    const profile = await this.profileRepository.findOne({ where: { identifier } });
+    if (!profile) {
+      throw new UnauthorizedException('Profile not found');
+    }
+    const { passwordHash: _, ...result } = profile;
+    return result;
+  }
+
+  async updateProfile(identifier: string, updateData: { fullName?: string; email?: string }) {
+    await this.profileRepository.update({ identifier }, updateData);
+    return this.findByIdentifier(identifier);
+  }
+
+  async changePassword(identifier: string, currentPass: string, newPass: string) {
+    const profile = await this.profileRepository.findOne({ where: { identifier } });
+    if (!profile) {
+      throw new UnauthorizedException('Profile not found');
+    }
+
+    const isMatch = await bcrypt.compare(currentPass, profile.passwordHash);
+    if (!isMatch) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const passwordHash = await bcrypt.hash(newPass, 10);
+    await this.profileRepository.update({ identifier }, { passwordHash });
+
+    return { message: 'Password updated successfully' };
+  }
+
+  async remove(identifier: string) {
+    const profile = await this.profileRepository.findOne({ where: { identifier } });
+    if (!profile) {
+      throw new UnauthorizedException('Profile not found');
+    }
+    await this.profileRepository.remove(profile);
+    return { message: 'Account deleted successfully' };
   }
 }
