@@ -45,7 +45,7 @@ export default function HomeLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="(chat-room)"
         options={{
           title: "Chat",
           tabBarIcon: ({ color, size }) => (
