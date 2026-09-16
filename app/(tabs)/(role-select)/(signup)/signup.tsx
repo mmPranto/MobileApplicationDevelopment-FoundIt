@@ -9,10 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants"; // Read configuration from app.config.js
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -22,6 +24,11 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Added loading state for network request
+
+  // Get dynamic API base URL from app.config.js (Fallback to localhost if undefined)[cite: 1]
+  const BASE_URL =
+    Constants.expoConfig?.extra?.apiUrl ?? "http://localhost:5000";
 
   const studentRegex = /^\d{2}-\d{5}-\d{1}$/;
   const teacherRegex = /^\d{4}-\d{4}-\d{1}$/;
@@ -31,9 +38,14 @@ export default function SignUpScreen() {
       ? teacherRegex.test(identifier)
       : studentRegex.test(identifier);
 
-  const handleSignUp = () => {
-    // Check if any field is empty
-    if (!fullName.trim() || !identifier.trim() || !email.trim() || !password.trim()) {
+  const handleSignUp = async () => {
+    
+    if (
+      !fullName.trim() ||
+      !identifier.trim() ||
+      !email.trim() ||
+      !password.trim()
+    ) {
       Alert.alert("Error", "Please fill in all fields.");
       return;
     }
@@ -44,20 +56,52 @@ export default function SignUpScreen() {
       return;
     }
 
-    // Check password length (e.g., minimum 8 characters)
+    // Check password length
     if (password.length < 8) {
       Alert.alert("Error", "Password must be at least 8 characters long.");
       return;
     }
 
-    console.log(`Signing up successfully as ${role}:`, {
-      fullName,
-      identifier,
-      email,
-    });
+    setIsLoading(true);
 
-    // Navigate back to the login page after successful sign up
-    router.push("/login"); // Alternatively, you can use router.back()
+    try {
+      
+      const response = await fetch(`${BASE_URL}/profiles/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName,
+          identifier,
+          email,
+          password,
+          role,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to sign up on the server.");
+      }
+
+      console.log(`Signed up successfully as ${role}:`, {
+        fullName,
+        identifier,
+        email,
+      });
+
+      Alert.alert("Success", "Account created successfully!");
+      router.push("/login");
+    } catch (error: any) {
+      Alert.alert(
+        "Connection Error",
+        error.message || "Could not connect to backend server.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -67,7 +111,7 @@ export default function SignUpScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Top Bar with Back Button & Landing-Style Brand Logo */}
+          
           <View style={styles.topBar}>
             <TouchableOpacity
               style={styles.backButton}
@@ -86,7 +130,7 @@ export default function SignUpScreen() {
 
           <Text style={styles.title}>Create Account</Text>
 
-          {/* Role Selector Toggle */}
+          
           <Text style={styles.label}>Select Role</Text>
           <View style={styles.categoryContainer}>
             {(["student", "teacher"] as const).map((r) => (
@@ -164,8 +208,16 @@ export default function SignUpScreen() {
             />
           </View>
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleSignUp}>
-            <Text style={styles.submitButtonText}>Sign Up</Text>
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSignUp}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitButtonText}>Sign Up</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

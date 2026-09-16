@@ -7,18 +7,25 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 
 export default function LoginScreen() {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   
+  const BASE_URL =
+    Constants.expoConfig?.extra?.apiUrl ?? "http://localhost:5000";
+
   const studentRegex = /^\d{2}-\d{5}-\d{1}$/;
   const teacherRegex = /^\d{4}-\d{4}-\d{1}$/;
 
@@ -28,12 +35,48 @@ export default function LoginScreen() {
 
   const isFormValid =
     identifier.trim().length > 0 &&
-    password.length >= 8 &&
+    password.length >= 6 &&
     detectedRole !== null;
 
-  const handleLogin = () => {
-    console.log(`Logging in as ${detectedRole}`);
-    router.push("/(home)");
+  const handleLogin = async () => {
+    if (!isFormValid) {
+      Alert.alert("Error", "Please fill in valid credentials.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${BASE_URL}/profiles/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          identifier,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to log in.");
+      }
+
+      console.log("Logged in successfully:", data.user);
+      Alert.alert("Success", `Welcome back, ${data.user.fullName}!`);
+
+      
+      router.push("/(home)" as any);
+    } catch (error: any) {
+      Alert.alert(
+        "Login Failed",
+        error.message || "Could not connect to backend server.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -42,7 +85,6 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.innerContainer}
       >
-        
         <View style={styles.topBar}>
           <TouchableOpacity
             style={styles.backButton}
@@ -59,7 +101,6 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        
         <View style={styles.contentContainer}>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>
@@ -115,16 +156,19 @@ export default function LoginScreen() {
           <TouchableOpacity
             style={[
               styles.loginButton,
-              !isFormValid && styles.loginButtonDisabled,
+              (!isFormValid || isLoading) && styles.loginButtonDisabled,
             ]}
             onPress={handleLogin}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isLoading}
           >
-            <Text style={styles.loginButtonText}>Login</Text>
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.loginButtonText}>Login</Text>
+            )}
           </TouchableOpacity>
         </View>
 
-        
         <View style={styles.footerContainer}>
           <TouchableOpacity
             onPress={() =>
