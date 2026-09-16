@@ -30,7 +30,7 @@ export default function LandingScreen() {
 
         <TouchableOpacity
           style={styles.primaryButton}
-          onPress={() => router.push('/(tabs)/(role-select)')}
+          onPress={() => router.push('/login')}
         >
           <Text style={styles.primaryButtonText}>Get Started</Text>
           <Ionicons name="arrow-forward" size={18} color="#ffffff" />
